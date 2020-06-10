@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -15,7 +16,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitScheduler;
 
 import RPGProspecting.environment.salvage.Salvage;
-import RPGProspecting.environment.salvage.SalvageDropHandler;
+import RPGProspecting.environment.salvage.SalvageUtil;
 import RPGProspecting.environment.salvage.SalvageMath;
 
 public class SalvageListener implements Listener {
@@ -55,64 +56,88 @@ public class SalvageListener implements Listener {
 	
 	// Roll for loot and return item stack
 	private void roll(PlayerInteractEvent event) {
+		
 		switch(event.getClickedBlock().getType()) {
+		
+		case SEA_PICKLE:
+			
+			Loot(event.getPlayer(), SalvageUtil.SEA_PICKLE, "Canned Soup");
+			
+			break;
 		
 		case DEAD_BUSH:
 			
-			Loot(event);
+			Loot(event.getPlayer(), SalvageUtil.DEAD_BUSH, "Dried Bush");
 			
 			break;
 			
-		case ACACIA_WOOD:
+		// Crate
+		case ORANGE_GLAZED_TERRACOTTA:
 			
 			if (event.getItem().getType() != Material.WOODEN_SWORD) break;
 			
-			Loot(event);
+			Loot(event.getPlayer(), SalvageUtil.CRATE, "Crate");
+			break;
+			
+		// Metal crate
+		case MAGENTA_GLAZED_TERRACOTTA:
+			
+			if (event.getItem().getType() != Material.WOODEN_SWORD) break;
+			
+			Loot(event.getPlayer(), SalvageUtil.METAL_CRATE, "Metal Crate");
+			
+		case LIGHT_BLUE_GLAZED_TERRACOTTA:
+			
+			if (event.getItem().getType() != Material.SEAGRASS) break;
+			
+			Loot(event.getPlayer(), SalvageUtil.MILITARY_CRATE, "Military Crate");
+			
+			break;
 			
 			default:
 				break;
 		}
 	}
 	
-	private void Loot(PlayerInteractEvent event) {
+	private void Loot(Player player, Salvage[] salvages, String name) {
 		
 		// Timer
 		
-		doingTasks.add(event.getPlayer().getDisplayName());
+		doingTasks.add(player.getDisplayName());
 		
 		BukkitScheduler scheduler = Bukkit.getServer().getScheduler();
 		
 		scheduler.scheduleSyncDelayedTask(plugin, new Runnable() {
             @Override
             public void run() {
-            	event.getPlayer().sendMessage("§c1...");
+            	player.sendMessage("§c1...");
             }
         }, 20);
 		
 		scheduler.scheduleSyncDelayedTask(plugin, new Runnable() {
             @Override
             public void run() {
-            	event.getPlayer().sendMessage("§c2...");
+            	player.sendMessage("§c2...");
             }
         }, 40);
 		
 		scheduler.scheduleSyncDelayedTask(plugin, new Runnable() {
             @Override
             public void run() {
-            	event.getPlayer().sendMessage("§c3...");
+            	player.sendMessage("§c3...");
             }
         }, 60);
 		
 		scheduler.scheduleSyncDelayedTask(plugin, new Runnable() {
             @Override
             public void run() {
-            	event.getPlayer().sendMessage("§cYou've successfully salvaged §c" + event.getClickedBlock().getType().name() + "§c.");
+            	player.sendMessage("§cYou've successfully looted a §c" + name + "§c.");
             	// Roll for drop on every salvage item.
-    			for (Salvage salvage : SalvageDropHandler.DEAD_BUSH) {
+    			for (Salvage salvage : salvages) {
     				// Roll and add item.
-    				event.getPlayer().getInventory().addItem(SalvageMath.DropMath(salvage));
+    				player.getInventory().addItem(SalvageMath.DropMath(salvage));
     			}
-    			doingTasks.remove(event.getPlayer().getDisplayName());
+    			doingTasks.remove(player.getDisplayName());
             }
         }, 80);
 	}
