@@ -4,7 +4,10 @@ import java.util.ArrayList;
 
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.block.Block;
+import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -12,6 +15,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitScheduler;
 
@@ -22,6 +26,8 @@ import RPGProspecting.environment.salvage.SalvageMath;
 public class SalvageListener implements Listener {
 
 	private ArrayList<String> doingTasks = new ArrayList<String>();
+	
+	private ArrayList<Location> lootedCrates = new ArrayList<Location>();
 	
 	private JavaPlugin plugin;
 	
@@ -61,13 +67,20 @@ public class SalvageListener implements Listener {
 		
 		case SEA_PICKLE:
 			
-			Loot(event.getPlayer(), SalvageUtil.SEA_PICKLE, "Canned Soup");
+			loot(event.getPlayer(), SalvageUtil.SEA_PICKLE, "Canned Soup");
 			
 			break;
 		
 		case DEAD_BUSH:
 			
-			Loot(event.getPlayer(), SalvageUtil.DEAD_BUSH, "Dried Bush");
+			if (isLooted(event.getClickedBlock())) {
+				event.getPlayer().sendMessage("§cThis has already been looted.");
+				return;
+			}
+			
+			loot(event.getPlayer(), SalvageUtil.DEAD_BUSH, "Dried Bush");
+			
+			respawnCrate(event.getClickedBlock());
 			
 			break;
 			
@@ -76,7 +89,15 @@ public class SalvageListener implements Listener {
 			
 			if (event.getItem().getType() != Material.WOODEN_SWORD) break;
 			
-			Loot(event.getPlayer(), SalvageUtil.CRATE, "Crate");
+			System.out.print(isLooted(event.getClickedBlock()));
+			if (isLooted(event.getClickedBlock())) {
+				event.getPlayer().sendMessage("§cThis has already been looted.");
+				break;
+			}
+			
+			loot(event.getPlayer(), SalvageUtil.CRATE, "Crate");
+			
+			respawnCrate(event.getClickedBlock());
 			break;
 			
 		// Metal crate
@@ -84,13 +105,30 @@ public class SalvageListener implements Listener {
 			
 			if (event.getItem().getType() != Material.WOODEN_SWORD) break;
 			
-			Loot(event.getPlayer(), SalvageUtil.METAL_CRATE, "Metal Crate");
+			if (isLooted(event.getClickedBlock())) {
+				event.getPlayer().sendMessage("§cThis has already been looted.");
+				break;
+			}
 			
+			loot(event.getPlayer(), SalvageUtil.METAL_CRATE, "Metal Crate");
+			
+			respawnCrate(event.getClickedBlock());
+			
+		// Military crate, no cooldown for looting since it requires key anyways
 		case LIGHT_BLUE_GLAZED_TERRACOTTA:
 			
 			if (event.getItem().getType() != Material.SEAGRASS) break;
 			
-			Loot(event.getPlayer(), SalvageUtil.MILITARY_CRATE, "Military Crate");
+			if (isLooted(event.getClickedBlock())) {
+				event.getPlayer().sendMessage("§cThis has already been looted.");
+				return;
+			}
+			
+			loot(event.getPlayer(), SalvageUtil.MILITARY_CRATE, "Military Crate");
+			
+			respawnCrate(event.getClickedBlock());
+			
+			event.getPlayer().getInventory().removeItem(new ItemStack(Material.SEAGRASS));
 			
 			break;
 			
@@ -99,7 +137,7 @@ public class SalvageListener implements Listener {
 		}
 	}
 	
-	private void Loot(Player player, Salvage[] salvages, String name) {
+	private void loot(Player player, Salvage[] salvages, String name) {
 		
 		// Timer
 		
@@ -165,6 +203,34 @@ public class SalvageListener implements Listener {
 			}
 		}
 		return null;
+	}
+	
+	// After 2 minecraft days the item respawns
+	public void respawnCrate(Block block) {
+		
+		Location savedCrate = block.getLocation();
+		
+		lootedCrates.add(savedCrate);
+		
+		System.out.print(lootedCrates);
+		
+		BukkitScheduler scheduler = Bukkit.getServer().getScheduler();
+		
+		scheduler.scheduleSyncDelayedTask(plugin, new Runnable() {
+            @Override
+            public void run() {
+            	lootedCrates.remove(savedCrate);
+            }
+        }, 48000);
+	}
+	
+	public boolean isLooted(Block block) {
+		if (lootedCrates.contains(block.getLocation())) {
+			return true;
+		}
+		else {
+			return false;
+		}
 	}
 	
 }
